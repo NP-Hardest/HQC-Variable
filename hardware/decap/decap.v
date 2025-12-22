@@ -595,7 +595,7 @@ assign pm_valid_d      = (encap_inside_decap)? 0: pm_valid;
 assign pm_dout_d       = pm_dout;
  
   
-   poly_mult_new #(
+   poly_mult #(
   .parameter_set(parameter_set),
   .MAX_WEIGHT(WEIGHT_ENC),
   .N(N),

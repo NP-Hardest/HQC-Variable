@@ -503,7 +503,7 @@ assign hs_in_1 = (hs_addr_1_reg> (X + X%2)/2 - 1)? 0: hs_1;
 
 
 `ifndef SHARED
- poly_mult_new #(
+ poly_mult #(
 // poly_mult #(
   .parameter_set(parameter_set),
   .MAX_WEIGHT(WEIGHT_ENC),
@@ -1130,7 +1130,6 @@ begin
             u_cpy_addr <= 0;
             if(hs_addr_0_reg == (X + X%2)/2-1) begin
             
-            //	$display("from enc: %h, %d | %h, %d", hs_in_1, hs_addr_1_reg, hs_in_0, hs_addr_0_reg);
             end
             if (done_poly_mult) begin
                 u_state <= u_r1_plus_r2h;       
@@ -1277,7 +1276,6 @@ begin
         end
         
         else if (v_state == v_mG_plus_sr2_plus_e) begin
-       //      $display( "%h | %h || %h || %h ||%b|| %d", add_in_1, add_in_2, xor_add_out, ((u_v_in_wen && sel_uv == 1)? u_v_in : xor_add_en? xor_add_out : add_out), xor_add_en, xor_add_out_addr);
         
             sel_e <= 0;
             if (done_xor_adder) begin

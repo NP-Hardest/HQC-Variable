@@ -9,8 +9,11 @@ sk_seed_filename = "sk_seed.in"
 
 #encap
 msg_128 = 000102030405060718090a0b0c0d0e0f #message input hex (The maximum message length depends on the security level)
+#msg_128 = 11111111111111111111111111111111
 msg_192 = 000102030405060708090a0b0c0d0e0f1011121314151617 #message input hex (The maximum message length depends on the security level)
+#msg_192 = e3fc1814b93ca26a1e2e29f6798cdffd89022a2cc387c705
 msg_256 = 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f #message input hex (The maximum message length depends on the security level)
+#msg_256 = 3aaee04fd876a3256685b28084d498cc5980dee2ade81c7835cc70bf515765c7
 msg128_file_name = "msg_128.in"
 msg192_file_name = "msg_192.in"
 msg256_file_name = "msg_256.in"

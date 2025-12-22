@@ -149,70 +149,128 @@ module decrypt
   
   
 
-  
-  v_minus_uy 
-  #(.parameter_set(parameter_set), .RAMWIDTH(RAMWIDTH))
-  V_MINUS_UY
-  ( .clk(clk),
-    .rst(rst),
-    .start(start),
 
-    .done(done_u_minus_vy),
-    
-    .y_addr(y_addr),
-    .y(y),
-    
-    .uv_0(uv_0),
-    .uv_1(uv_1),
-    .uv_addr_0(uv_addr_0),
-    .uv_addr_1(uv_addr_1),
-	.sel_uv(sel_uv),
-	
-	.out_en(ram_din_rd_o),
-	.out_addr(ram_din_addr_o),
-	.u_minus_vy_out(ram_din_i),
-	
-	//shared poly mult ports
-    .pm_start(pm_start),    
-    .pm_loc_in(pm_loc_in),
-    .pm_weight(pm_weight),
-    .pm_mux_word_0(pm_mux_word_0),
-    .pm_mux_word_1(pm_mux_word_1),
-    .pm_rd_dout(pm_rd_dout),
-    .pm_addr_result(pm_addr_result),
-    .pm_add_wr_en(pm_add_wr_en),
-    .pm_add_addr(pm_add_addr),
-    .pm_add_in(pm_add_in),
-    
-    .pm_loc_addr(pm_loc_addr),
-    .pm_addr_0(pm_addr_0),
-    .pm_addr_1(pm_addr_1),
-    .pm_valid(pm_valid),
-    .pm_dout(pm_dout)	
+
+    localparam DEC_WIDTH = 128;                 
+    localparam RATIO     = RAMWIDTH / DEC_WIDTH;   
+    localparam LOG_RATIO = $clog2(RATIO);          
+
+
+    localparam LOGICAL_RAMDEPTH = (N + (DEC_WIDTH - N % DEC_WIDTH) % DEC_WIDTH) / DEC_WIDTH;
+    localparam LOG_LOGICAL_RAMDEPTH = $clog2(LOGICAL_RAMDEPTH);
+
+
+    wire [LOG_LOGICAL_RAMDEPTH-1:0] ram_din_addr_o;
+    wire [RAMWIDTH-1:0] wide_mem_data;             
+    wire [RAMWIDTH-1:0] ram_din_i_wide_padded;   
+    wire [DEC_WIDTH-1:0] ram_din_i;                 
+    wire ram_din_rd_o;
+    wire done_u_minus_vy;
+
+
+    v_minus_uy 
+    #(.parameter_set(parameter_set), .RAMWIDTH(RAMWIDTH))
+    V_MINUS_UY
+    ( 
+        .clk(clk),
+        .rst(rst),
+        .start(start),
+        .done(done_u_minus_vy),
+        
+        .y_addr(y_addr),
+        .y(y),
+        .uv_0(uv_0),
+        .uv_1(uv_1),
+        .uv_addr_0(uv_addr_0),
+        .uv_addr_1(uv_addr_1),
+        .sel_uv(sel_uv),
+        
+        .out_en(ram_din_rd_o),
+        
+       
+        .out_addr(ram_din_addr_o[LOG_LOGICAL_RAMDEPTH-1 : LOG_RATIO]), 
+        
+       
+        .u_minus_vy_out(wide_mem_data),
+        
+ 
+        .pm_start(pm_start),        
+        .pm_loc_in(pm_loc_in),
+        .pm_weight(pm_weight),
+        .pm_mux_word_0(pm_mux_word_0),
+        .pm_mux_word_1(pm_mux_word_1),
+        .pm_rd_dout(pm_rd_dout),
+        .pm_addr_result(pm_addr_result),
+        .pm_add_wr_en(pm_add_wr_en),
+        .pm_add_addr(pm_add_addr),
+        .pm_add_in(pm_add_in),
+        .pm_loc_addr(pm_loc_addr),
+        .pm_addr_0(pm_addr_0),
+        .pm_addr_1(pm_addr_1),
+        .pm_valid(pm_valid),
+        .pm_dout(pm_dout)   
     );
- 
- wire ram_din_rd_o;
- wire [RAMWIDTH-1:0] ram_din_i;
- wire [LOG_RAMDEPTH-1:0] ram_din_addr_o;
- wire done_u_minus_vy;
- 
- 
- 
-   
- hqc_decod_wrapper#(.PARAM_SECURITY(K), .WRAPPER_DIN_W(RAMWIDTH)) 
-   DECODE
-   (
-    .clk_i(clk),
-    .rst_ni(~rst),
-    .start_i(done_u_minus_vy),
-//    .busy_o(), 
-  
-    .ram_din_i(ram_din_i),
-    .ram_din_rd_o(ram_din_rd_o),
-    .ram_din_addr_o(ram_din_addr_o),
+
+
     
-    .dout_o(dout),      
-    .dout_valid_o(done)
-   );
+    
+    reg [LOG_LOGICAL_RAMDEPTH-1:0] ram_din_addr_o_reg = 0;
+    always @ (posedge clk) begin
+    
+    	ram_din_addr_o_reg = ram_din_addr_o;
+    end
+    
+    generate
+        if (RATIO == 1) begin
+            assign ram_din_i = wide_mem_data;
+        end else begin
+    
+            wire [LOG_RATIO-1:0] selection_idx = ram_din_addr_o_reg[LOG_RATIO-1:0];
+            assign ram_din_i = wide_mem_data[selection_idx * DEC_WIDTH +: DEC_WIDTH];
+        end
+    endgenerate
+
+    reg decode_active;
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            decode_active <= 1'b0;
+        end else begin
+            if (done_u_minus_vy)       
+                decode_active <= 1'b1;
+            else if (done)          
+                decode_active <= 1'b0;
+        end
+    end
+
+
+    always @(posedge clk) begin
+        if(decode_active) begin
+
+            $display("LogAddr: %d | PhysAddr: %d | Data: %h | OG: %h", 
+                     ram_din_addr_o, 
+                     ram_din_addr_o[LOG_LOGICAL_RAMDEPTH-1 : LOG_RATIO], 
+                     ram_din_i,
+                     wide_mem_data);
+        end
+        if(done) $display("%h", dout);
+    end 
+       
+
+    hqc_decod_top #(.PARAM_SECURITY(K)) 
+    DECODE
+    (
+        .clk_i(clk),
+        .rst_ni(~rst),
+        .start_i(done_u_minus_vy),
+    //  .busy_o(), 
+      
+        .ram_din_i(ram_din_i),          
+        .ram_din_rd_o(ram_din_rd_o),
+        .ram_din_addr_o(ram_din_addr_o), 
+        
+        .dout_o(dout),       
+        .dout_valid_o(done)
+    );
     
 endmodule

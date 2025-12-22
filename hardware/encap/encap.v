@@ -590,7 +590,6 @@ end
 always@(posedge clk)
 begin
     if (start) begin
-    //	$display("%d", HASH_RAMDEPTH);
         count_hash_inputs_test <= 0;
     end
     else if (hash_mem_wen == 1 && shake_in_type != 0) begin
@@ -1143,10 +1142,7 @@ begin
         end
         
         else if (state == s_comp_ss) begin
-               if(parameter_set == "hqc128") begin
-                                             $display("heher");
-                 $writememh("mem_u.in", HASH_MEM.mem);
-                 end
+
             state <= s_wait_ss;
             shake_dout_ready_h <= 1;
             hash_in_addr <= 0;

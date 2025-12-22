@@ -213,11 +213,6 @@ generate
                 wr_en_rand <= 1'b1;
             end
             else begin
-            if(parameter_set == "hqc128") begin
-            
-           
-            	$writememh("mem_a.in", rand_mem.mem);
-            	end
                 wr_en_rand <= 1'b0;
             end
         end
@@ -229,11 +224,6 @@ generate
                 wr_en_rand <= 1'b1;
             end
             else begin
-               if(parameter_set == "hqc128") begin
-            
-           
-            	$writememh("mem_b.in", rand_mem.mem);
-            	end
                 wr_en_rand <= 1'b0;
             end
         end

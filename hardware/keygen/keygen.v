@@ -456,9 +456,6 @@ parameter s_wait_for_x_transfer= 8;
 
 always@(posedge clk)
 begin
-	if(state == s_h_mul_y) begin
-	//	$display("%d %d, %h",rand_out_addr_0_reg, (X+X%2)/2, mux_word_0);
-	end
 
      if (rst) begin
         state <= s_wait_start;

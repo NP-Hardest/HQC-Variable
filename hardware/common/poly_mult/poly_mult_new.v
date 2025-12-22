@@ -337,20 +337,6 @@ parameter LOG_W_BY_X = `CLOG2(W_BY_X);
 //assign shift_int = shift[LOG_W_BY_X-1:0];
 
 
-always @(posedge clk) begin
-
-	if(add_wr_en && add_in === {RAMWIDTH{1'bx}}) begin
-		//$display ("from polymult adder.  %h, %t", add_in, $time);
-	end
-	
-	if( wren_0_intermediate && din_0 === {RAMWIDTH{1'bx}}) begin
-		//$display ("from polymult inter.  %h, %t", din_0, $time);
-	end
-	
-	if(rd_dout && dout === {RAMWIDTH{1'bx}}) begin
-	//	$display ("from polymult read.  %h, address : %d, %t\n", dout, addr_result, $time);
-	end
-end
 
 
 
@@ -508,7 +494,7 @@ assign count_chunks_reg = addr_0_intermediate + 1;
 always@(posedge clk)
 begin
     if (rst) begin
-    $display("from new polymult%d %d", RAMWIDTH, W_BY_X);
+
         state <= S_WAIT_START_L;
 		addr_0_reg <=  0;
 		addr_1_reg <=  0;
@@ -548,7 +534,7 @@ begin
             addr_1_int_red_mem <= 0;
 			
 			if (start) begin
-			$display("**************** DIFF BITS: %d", DIFF_BITS);
+
 			    state <= S_CLEAR_INTER_MEM; 
 				
 				if (shift[LOGW-1:LOGW-ADDR_WIDTH] == 0) begin
@@ -623,9 +609,7 @@ begin
         
         
         else if (state == S_ADDR_SETTING) begin
-		//	        if(parameter_set == "hqc192") begin
-                  //               $writememh("s_pms_128.in", INTERLEAVED_RED_MEM.mem);
-        //end
+
 
             if (shift[LOGW-1:LOGW-ADDR_WIDTH] == 0) begin
                 addr_0_reg <=0;

@@ -503,7 +503,7 @@ assign hs_in_1 = (hs_addr_1_reg> (X + X%2)/2 - 1)? 0: hs_1;
 
 
 `ifndef SHARED
- poly_mult #(
+ poly_mult_new #(
 // poly_mult #(
   .parameter_set(parameter_set),
   .MAX_WEIGHT(WEIGHT_ENC),

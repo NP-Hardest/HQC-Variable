@@ -1,5 +1,27 @@
+`timescale 1ns / 1ps
+/*
+ * 
+ *
+ * Copyright (C) 2025
+ * Author: Sanjay Deshpande <sanjay.deshpande1@northwestern.edu>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+ *
+*/
 
-module fixed_weight_cww_tb
+module fixed_weight_cww_opt_tb
   #(
     parameter parameter_set = "hqc256",
     
@@ -70,11 +92,15 @@ reg [LOG_WEIGHT - 1 : 0]rd_addr_error_loc = 0;
 reg [31:0] sk_seed =0;
 reg [3:0]sk_seed_addr = 0;
 reg sk_seed_wen =0;
-  fixed_weight_cww #(.parameter_set(parameter_set), .N(N), .M(M), .WEIGHT(WEIGHT), .FILE_SKSEED("hqc_pk_seed_from_spec.mem") )
+reg init = 0;
+wire ready;
+
+  fixed_weight_cww_opt #(.parameter_set(parameter_set), .N(N), .M(M), .WEIGHT(WEIGHT), .FILE_SKSEED("hqc_pk_seed_from_spec.mem") )
   DUT  (
     .clk(clk),
     .rst(rst),
     .start(start),
+
     .sk_seed_addr(sk_seed_addr),
     .sk_seed(sk_seed),
     .sk_seed_wen(sk_seed_wen),
@@ -123,11 +149,15 @@ SHAKE256(
     begin
     rst <= 1'b1;
     addr <= 0;
+    init <= 1'b0;
     # 20;
     rst <= 1'b0;
-    #100
-    start_time = $time;
+
     
+    #100
+
+    start_time = $time;
+
     start <= 1'b1; 
     
     #10
@@ -138,6 +168,7 @@ SHAKE256(
 
       @(posedge done);
       $display("Total Clock Cycles for 1st:",($time-start_time)/10);
+//      $writememb("locations.in", DUT.loca_mem.mem);
       #100
       
       request_another_vector <= 2'b11;
@@ -161,6 +192,7 @@ SHAKE256(
       
       # 10000;
       $finish;
+      
     end
   
   always 

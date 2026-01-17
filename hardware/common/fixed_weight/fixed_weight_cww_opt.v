@@ -2,8 +2,8 @@
 /*
  * 
  *
- * Copyright (C) 2022
- * Author: Sanjay Deshpande <sanjay.deshpande@yale.edu>
+ * Copyright (C) 2025
+ * Author: Sanjay Deshpande <sanjay.deshpande1@northwestern.edu>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 */
 
 
-module fixed_weight_cww
+module fixed_weight_cww_opt
 #( 
 
     parameter parameter_set = "hqc128",
@@ -84,6 +84,7 @@ module fixed_weight_cww
     input clk,
     input rst,
     input start,
+
     
 //    input seed_valid,
     input [31:0] sk_seed,
@@ -245,32 +246,79 @@ B_RED
     .red_out(dout_shake_reduced)
 );
 
+reg init_mem_dd;
+wire [(M-1):0] location_dd;
+wire [LOG_WEIGHT-1:0] rd_addr_dd;
+wire  [LOG_WEIGHT-1:0] wr_addr_dd;
+wire wr_en_dd;
+wire [(M-1):0] wr_data_dd;
+wire rd_en_dd;
+reg start_dd;
+wire collision_dd;
+wire ready_dd;
+wire done_dd;
+
+assign location_dd = mem_out_0;
+
+parameter MEM_WIDTH_DD = 128;
+
+  duplicate_detection 
+   #(
+    .M(M),
+    .E0_WIDTH(MEM_WIDTH_DD),
+    .E0_DEPTH(N/MEM_WIDTH_DD + 1),
+    .WIDTH(MEM_WIDTH_DD),
+    .DEPTH(N/MEM_WIDTH_DD + 1),
+    .WEIGHT(WEIGHT)
+   )
+  DUP_DET (
+    .clk(clk),
+    .rst(rst),
+    .init_mem(init_mem_dd),
+    .location(location_dd),
+    .start(start_dd),
+    .rd_addr(rd_addr_dd),
+    .rd_en(rd_en_dd),
+    .wr_data(wr_data_dd),
+    .wr_addr(wr_addr_dd),
+    .wr_en(wr_en_dd),
+    .ready(ready_dd),
+    // .valid(valid),
+    .collision(collision_dd),
+    .done(done_dd)
+    
+    
+    );
 
 reg [31:0] shake_output_counter;
 
 
 wire [`CLOG2(WEIGHT)-1:0] addr_0,addr_1;
-reg [`CLOG2(WEIGHT):0]  wr_addr, rd_addr;
+reg [`CLOG2(WEIGHT):0]  rd_addr;
+// reg [`CLOG2(WEIGHT):0]  wr_addr, rd_addr;
 reg wr_en_0, wr_en_1;
-wire wr_en_1_reg;
-reg swap;
-reg duplicate_detected;
+// wire wr_en_1_reg;
+// reg swap;
+// reg duplicate_detected;
 //assign addr_0 = wr_addr;
 //assign addr_1 = rd_addr;
 
 //assign addr_0 = (rd_error_loc)? rd_addr_error_loc: (swap)? wr_addr :rd_addr;
 //assign addr_1 = (swap)?         rd_addr :wr_addr;
 
-assign addr_0 = (rd_error_loc)? rd_addr_error_loc: wr_addr;
-assign addr_1 = rd_addr;
+assign addr_0 = (rd_error_loc)? rd_addr_error_loc: 
+                                rd_en_dd? rd_addr_dd:
+                                0;
+                                // wr_addr;
+assign addr_1 = wr_en_dd? wr_addr_dd : rd_addr;
 
 wire [`CLOG2(N)-1:0]  mem_in_0, mem_in_1;
 wire [`CLOG2(N)-1:0]  mem_out_0, mem_out_1;
 wire [`CLOG2(N)-1:0]  mem_comp;
 wire [`CLOG2(N)-1:0] dout_shake_reduced;
 
-  assign mem_in_0 = WEIGHT - count;
-  assign mem_in_1 = addr_1 + dout_shake_reduced;
+//   assign mem_in_0 = WEIGHT - count;
+  assign mem_in_1 = wr_en_dd? wr_data_dd : addr_1 + dout_shake_reduced;
 //  assign mem_in_1 = addr_1 + dout_shake % n_minus_i;
  
  
@@ -287,22 +335,21 @@ wire [`CLOG2(N)-1:0] dout_shake_reduced;
     .q_1(mem_out_1)
   );
   
+
+
+
 assign error_loc = mem_out_0;
 
-wire test_mem1_mem2;
-assign test_mem1_mem2 = (mem_out_0 == mem_out_1)?1 :0;
+// wire test_mem1_mem2;
+// assign test_mem1_mem2 = (mem_out_0 == mem_out_1)?1 :0;
 
-assign mem_comp = duplicate_detected? mem_in_0: mem_out_0;
+// assign mem_comp = duplicate_detected? mem_in_0: mem_out_0;
 
-//always@(posedge clk)
-//begin 
-
-//end 
 
 reg dout_shake_sel_red;
 
 
-reg [LOG_WEIGHT-1 : 0] wr_addr_ms_reg_0,wr_addr_ms_reg_1;
+// reg [LOG_WEIGHT-1 : 0] wr_addr_ms_reg_0,wr_addr_ms_reg_1;
 reg [LOG_WEIGHT-1 : 0] count;
 
 
@@ -325,14 +372,14 @@ wire dout_reduced_valid;
  begin
 //    dout_valid_sh_internal_reg <= dout_valid_sh_internal;
     if (rst) begin
-        wr_addr <=  0;
+        // wr_addr <=  0;
         rd_addr <=  0;
         done <= 0;  
         state <= s_init_mem;
         force_done_shake <= 0;
         count <= 0;
-        swap <= 0;
-        duplicate_detected <=0;
+        // swap <= 0;
+        // duplicate_detected <=0;
         shake_out_capture_ready <= 0;
         
     end
@@ -340,7 +387,7 @@ wire dout_reduced_valid;
         if (state == s_init_mem) begin
            force_done_shake <= 0;
            count <= 2;
-           swap <= 0;
+        //    swap <= 0;
            shake_out_capture_ready <= 1;
            if (dout_reduced_valid) begin
                 rd_addr <= rd_addr + 1;
@@ -348,20 +395,20 @@ wire dout_reduced_valid;
                 state <= s_load_shake;
            end
            done <= 0;
-           duplicate_detected <=0;
+        //    duplicate_detected <=0;
         end
         
         else if  (state == s_load_shake) begin
             done <= 0;
-            duplicate_detected <=0;
+            // duplicate_detected <=0;
             force_done_shake <= 0;
 //            if (wr_addr > WEIGHT - 1) begin
             if (rd_addr > WEIGHT - 1) begin
                 state <= s_stall;
 //                state <= s_done;
-                wr_addr <= WEIGHT - 2;
+                // wr_addr <= WEIGHT - 2;
                 rd_addr <= WEIGHT - 1;
-                swap <= 1;
+                // swap <= 1;
                 shake_out_capture_ready <= 0;
             end
             else begin
@@ -369,41 +416,24 @@ wire dout_reduced_valid;
                if (dout_reduced_valid) begin
 //                    wr_addr <= wr_addr + 1;
                     rd_addr <= rd_addr + 1;
-                    swap <= 0;
+                    // swap <= 0;
                     
                 end 
             end
         end
         
         else if (state == s_stall) begin 
+            if (ready_dd) begin
                 state <= s_swap;
-                swap <= 1;
-                shake_out_capture_ready <= 0;
+            end
         end
         
+        
         else if (state == s_swap) begin
-            swap <= 1;
-            shake_out_capture_ready <= 0;
-            if (mem_out_0 == mem_out_1) begin
-                duplicate_detected <=1;
-            end
-            else begin
-                duplicate_detected <= 0;
-            end       
-            if (rd_addr == WEIGHT - 1 && wr_addr == 0) begin
+            if (done_dd) begin
                 state <= s_done;
             end
-            else if (rd_addr == WEIGHT-1) begin
-                wr_addr <= wr_addr - 1;
-                rd_addr <= WEIGHT - count;
-                count <= count + 1; 
-//                state <= s_stall;      
-                state <= s_swap;      
-            end 
-            else begin   
-                state <= s_swap;
-                rd_addr <= rd_addr + 1;
-            end
+
         end
         
         
@@ -411,33 +441,38 @@ wire dout_reduced_valid;
             state <= s_init_mem;
             done <= 1;
             force_done_shake <= 0;
-            swap <= 0;
-            duplicate_detected <= 0;
+            // swap <= 0;
+            // duplicate_detected <= 0;
             shake_out_capture_ready <= 0;
             rd_addr <= 0;
-            wr_addr <= 0;
+            // wr_addr <= 0;
         end
     
     end
  end
  
 
-always@(state, dout_reduced_valid, wr_addr, rd_addr, mem_out_0, mem_out_1)
+always@(state, dout_reduced_valid, ready_dd, wr_en_dd)
 begin
     case (state)
     
         s_init_mem: begin
                         wr_en_0 <= 0;
+                        start_dd <= 0;
                         if (dout_reduced_valid) begin
                             wr_en_1 <= 1;
+                            init_mem_dd <= 1;
                         end
                         else begin
                             wr_en_1 <=0;
+                            init_mem_dd <= 0;
                         end
                     end
  
          s_load_shake: begin
                         wr_en_0 <= 0;
+                        init_mem_dd <= 0;
+                        start_dd <= 0;
                         if (dout_reduced_valid) begin
                             wr_en_1 <= 1;
                         end
@@ -449,21 +484,36 @@ begin
         s_stall:begin
                     wr_en_0 <= 0;
                     wr_en_1 <= 0;
+                    init_mem_dd <= 0;
+                    if (ready_dd) begin
+                        start_dd <= 1;
+                    end
+                    else begin
+                        start_dd <= 0;
+                    end
                 end
                 
         s_swap: begin
+                        wr_en_1 <= wr_en_dd;
+                        wr_en_0 <=0;
+                        init_mem_dd <= 0;
+                        start_dd <= 0;
+                        
+                    end 
+        
+        s_done: begin
                         wr_en_1 <= 0;
-                        if (mem_comp == mem_out_1) begin
-                            wr_en_0 <= 1;
-                        end
-                        else begin
-                            wr_en_0 <=0;
-                        end
+                        wr_en_0 <=0;
+                        init_mem_dd <= 0;
+                        start_dd <= 0;
+                        
                     end 
                       
         default: begin
                     wr_en_0 <=0;
                     wr_en_1 <= 0;
+                    init_mem_dd <= 0;
+                    start_dd <= 0;
                 end
     endcase
 end
@@ -677,5 +727,10 @@ begin
     endcase
 
 end  
-    
+
+
+
+
+
+
 endmodule
